@@ -1,0 +1,6 @@
+# App Configuration
+risk_free_rate: 0.015
+default_tickers:
+  - AAPL
+  - MSFT
+  - AMZN

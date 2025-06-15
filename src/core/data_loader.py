@@ -20,11 +20,16 @@ from typing import List, Tuple
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-@lru_cache(maxsize=32)
+import yfinance as yf
+import pandas as pd
+import logging
+
+logger = logging.getLogger(__name__)
+
 def fetch_historical_data(tickers, start, end):
     """
-    Fetch historical price data using Yahoo Finance.
-    Returns DataFrame with adjusted close prices.
+    Fetches historical close prices for given tickers.
+    Handles both single and multiple ticker cases.
     """
     try:
         tickers = list(tickers)
@@ -34,26 +39,24 @@ def fetch_historical_data(tickers, start, end):
         if len(tickers) == 1:
             ticker = tickers[0]
             if isinstance(df.columns, pd.MultiIndex):
-                df = df[ticker]['Close'].to_frame(name=ticker)
+                df = df[ticker]["Close"].to_frame(name=ticker)
             elif 'Close' in df.columns:
                 df = df[['Close']].rename(columns={'Close': ticker})
             else:
-                raise KeyError("No 'Close' column found in single ticker data.")
+                raise KeyError("No 'Close' column found")
         else:
-            # Handle multiple tickers
             if isinstance(df.columns, pd.MultiIndex):
-                close_data = {
-                    ticker: df[ticker]['Close'] for ticker in tickers if 'Close' in df[ticker].columns
-                }
+                close_data = {ticker: df[ticker]['Close'] for ticker in tickers if 'Close' in df[ticker]}
                 df = pd.concat(close_data, axis=1)
             else:
-                raise ValueError("Unexpected data format for multiple tickers.")
+                raise ValueError("Unexpected format for multiple tickers")
 
         df.dropna(how='all', inplace=True)
         return df
     except Exception as e:
         logger.error(f"Error fetching historical data: {e}")
         return pd.DataFrame()
+
 
 
 def fetch_latest_price(ticker: str) -> float:

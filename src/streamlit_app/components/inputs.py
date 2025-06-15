@@ -1,59 +1,22 @@
 import streamlit as st
-from streamlit_tags import st_tags
 from datetime import datetime, timedelta
 import yfinance as yf
 import requests
+from streamlit_lottie import st_lottie
 import os
 import json
 
-RECENT_TICKERS_FILE = "recent_tickers.json"
+# Load Lottie animations
+@st.cache_data(show_spinner=False)
+def load_lottieurl(url):
+    r = requests.get(url)
+    if r.status_code != 200:
+        return None
+    return r.json()
 
-# Load or initialize recent tickers from local storage
-def load_recent_tickers():
-    if os.path.exists(RECENT_TICKERS_FILE):
-        with open(RECENT_TICKERS_FILE, "r") as f:
-            return json.load(f)
-    return []
-
-def save_recent_tickers(ticker_list):
-    recent = load_recent_tickers()
-    new_unique = list(dict.fromkeys(ticker_list + recent))[:10]  # Limit to last 10
-    with open(RECENT_TICKERS_FILE, "w") as f:
-        json.dump(new_unique, f)
-
-def fetch_symbol_suggestions(query):
-    """
-    Query external API (e.g., Yahoo Finance via RapidAPI or Finnhub) to get autocomplete.
-    """
-    try:
-        url = f"https://query1.finance.yahoo.com/v1/finance/search?q={query}"
-        headers = {"User-Agent": "Mozilla/5.0"}
-        response = requests.get(url, headers=headers)
-        if response.status_code == 200:
-            return [item['symbol'] for item in response.json().get("quotes", [])][:10]
-        else:
-            return []
-    except:
-        return []
-
-def validate_tickers(ticker_list):
-    valid = []
-    for t in ticker_list:
-        try:
-            data = yf.Ticker(t).history(period="1d")
-            if not data.empty:
-                valid.append(t)
-        except:
-            pass
-    return valid
-
-import streamlit as st
-from datetime import datetime, timedelta
-import yfinance as yf
-import requests
-
+# Auto-suggest from Yahoo Finance
+@st.cache_data(show_spinner=False)
 def yahoo_autocomplete(search_term):
-    """Queries Yahoo Finance for symbol suggestions."""
     try:
         url = f"https://query1.finance.yahoo.com/v1/finance/search?q={search_term}"
         headers = {"User-Agent": "Mozilla/5.0"}
@@ -67,52 +30,72 @@ def yahoo_autocomplete(search_term):
         return []
 
 def portfolio_input_form():
-    st.markdown("### 🧮 Ticker Search (Autocomplete + Multi-Add)")
+    st.markdown("""
+        <style>
+        div.stButton > button:hover {
+            background-color: #005792;
+            color: white;
+            transition: 0.3s ease;
+        }
+        section.main > div:first-child {
+            background-color: #f8f9fa;
+            padding: 10px 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            animation: fadein 0.8s ease-in-out;
+        }
+        @keyframes fadein {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        header[data-testid="stHeader"] {visibility: visible;}
+        footer {visibility: hidden;}
+        .block-container {padding-top: 2rem;}
+        </style>
+    """, unsafe_allow_html=True)
 
-    # Initialize selected tickers
+    st.image("assets/logo.png", width=140)
+    st.markdown("## Portfolio Input Form")
+
     if "selected_tickers" not in st.session_state:
         st.session_state.selected_tickers = []
 
-    # Search bar with autocomplete
-    search_input = st.text_input("Search and press Enter to add a ticker:")
+    search_input = st.text_input("🔍 Search and press Enter to add a ticker:")
 
-    if search_input:
-        suggestions = yahoo_autocomplete(search_input.strip())
-        if len(suggestions) > 0:
-            selected = suggestions[0].split(" - ")[0].upper()
-            if selected not in st.session_state.selected_tickers:
-                st.session_state.selected_tickers.append(selected)
-
-    # Show selected
-    st.write("Selected Tickers:")
+    # Display tickers with individual remove buttons
+    st.write("### ✅ Selected Tickers:")
     tickers_to_remove = []
-    for i, ticker in enumerate(st.session_state.selected_tickers):
+    for i, ticker in enumerate(st.session_state.selected_tickers[:]):
         col1, col2 = st.columns([6, 1])
         with col1:
             st.code(ticker, language="text")
         with col2:
-            if st.button(f"❌", key=f"remove_{ticker}_{i}"):
+            if st.button("❌", key=f"remove_{ticker}_{i}"):
                 tickers_to_remove.append(ticker)
-    for ticker in tickers_to_remove:
-        st.session_state.selected_tickers.remove(ticker)
+
+    for t in tickers_to_remove:
+        if t in st.session_state.selected_tickers:
+            st.session_state.selected_tickers.remove(t)
+
+    if st.session_state.selected_tickers:
+        if st.button("🗑️ Clear All Tickers"):
+            st.session_state.selected_tickers = []
+
+    # Add new ticker
     if search_input:
         suggestions = yahoo_autocomplete(search_input.strip())
         if suggestions:
             selected = suggestions[0].split(" - ")[0].upper()
             if selected not in st.session_state.selected_tickers:
                 st.session_state.selected_tickers.append(selected)
-        # Optional: clear the input after adding (pseudo-clear)
-        st.rerun()
-    # Option to clear
-    if st.button("🗑️ Clear Tickers"):
-        st.session_state.selected_tickers = []
+                st.rerun()
 
-    # Validate tickers
-    valid = []
+    # Validate selected tickers using yfinance
+    valid_tickers = []
     for t in st.session_state.selected_tickers:
         try:
             if not yf.Ticker(t).history(period="1d").empty:
-                valid.append(t)
+                valid_tickers.append(t)
         except:
             pass
 
@@ -123,8 +106,4 @@ def portfolio_input_form():
     with col2:
         end = st.date_input("End Date", value=datetime.today())
 
-    return valid, start, end
-
-
-
-
+    return valid_tickers, start, end

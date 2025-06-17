@@ -23,13 +23,6 @@ from streamlit_app.components.charts import display_weights_pie, plot_efficient_
 def app():
         # --- Page configuration ---
         #st.set_page_config(page_title="Portfolio Manager & Optimizer", layout="wide")
-        # Display logo at the top of the page
-        logo_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..', 'assets', 'logo.png'))
-        if os.path.exists(logo_path):
-            st.image(logo_path, width=120)
-        else:
-            st.warning("Logo not found at: " + logo_path)
-
         # --- Title & Portfolio Picker ---
         st.title("📊 Portfolio Manager & Optimizer")
         all_names = get_all_portfolio_names()

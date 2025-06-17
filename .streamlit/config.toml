@@ -1,10 +1,13 @@
+# .streamlit/config.toml
 
 [theme]
-primaryColor = "#1DB954"               # Spotify Green
-backgroundColor = "#191414"            # Spotify Black
-secondaryBackgroundColor = "#1ED760"   # Spotify Light Green
-textColor = "#FFFFFF"                  # White text
-font = "sans serif"
+primaryColor = "#0B5394"               # Accent color (kept)
+backgroundColor = "#1E1E2F"            # Dark slate background
+secondaryBackgroundColor = "#2A2A3E"   # Slightly lighter panels
+textColor = "#E0E0E0"                  # Light grey text for readability
+font = "system-ui"
+
+
 
 
 [server]

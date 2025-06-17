@@ -1,65 +1,83 @@
+# src/streamlit_app/pages/main.py
 
-# src/streamlit_app/pages/Main.py
-import os, sys
+import sys
+from pathlib import Path
+import os
+import base64
+
 import streamlit as st
-st.set_page_config(page_title="Dashboard", layout="wide")
+from streamlit_option_menu import option_menu
+from streamlit.components.v1 import html as st_html
 
-# ensure core/ is on PYTHONPATH
-SRC_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-if SRC_DIR not in sys.path:
-    sys.path.append(SRC_DIR)
+# ─── 1) Make sure project_root/src is on sys.path ──────────────────────────────
+HERE      = Path(__file__).resolve()           # .../src/streamlit_app/pages/main.py
+SRC_FOLDER = HERE.parents[2]                   # .../src
+if str(SRC_FOLDER) not in sys.path:
+    sys.path.insert(0, str(SRC_FOLDER))
 
-# import the page functions
-from core.data_loader import fetch_futures, fetch_recommended, fetch_financial_news
-from streamlit_app.pages.pfopt import app as portfolio_app
+# ─── 2) Page config (must be first Streamlit call) ─────────────────────────────
+st.set_page_config(page_title="📊 Dashboard", layout="wide")
+
+# ─── 3) Load & Base64‐encode the logo ───────────────────────────────────────────
+PROJECT_ROOT = SRC_FOLDER.parent                # project_root
+logo_path    = PROJECT_ROOT / "assets" / "logo.png"
+logo_bytes   = logo_path.read_bytes()
+logo_b64     = base64.b64encode(logo_bytes).decode()
+
+# ─── 4) Inject fixed logo + CSS to hide default header & push content down ─────
+st_html(
+    f"""
+    <div style="
+      position: fixed;
+      top: 0; left: 50%;
+      transform: translateX(-50%);
+      z-index: 9999;
+      padding: 8px 0;
+      background: transparent;
+    ">
+      <img src="data:image/png;base64,{logo_b64}" width="300px" alt="Logo">
+    </div>
+    <style>
+      /* Hide Streamlit's header, menu, footer */
+      header[data-testid="stHeader"], #MainMenu, footer {{ display: none; }}
+      /* Push all your content below the pinned logo */
+      .block-container {{ padding-top: 120px !important; }}
+    </style>
+    """,
+    height=0,
+)
+
+# ─── 5) Top navigation bar (no delay/spinner) ──────────────────────────────────
+selection = option_menu(
+    menu_title=None,
+    options=["Home", "Portfolio"],
+    icons=["house", "bar-chart-line", "clock-history", "clipboard-data", "table"],
+    default_index=0,
+    orientation="horizontal",
+    styles={
+        "container": {"padding": "0 !important", "background-color": "#0B5394"},
+        "nav-link": {"font-size": "16px", "color": "white", "font-weight": "600"},
+        "nav-link-selected": {"background-color": "#07407A"},
+    },
+)
+
+# ─── 6) Immediate dispatch to each page ─────────────────────────────────────────
+if selection == "Home":
+    from streamlit_app.pages.home import show_home
+    show_home()
+
+elif selection == "Portfolio":
+    from streamlit_app.pages.pfopt import app as show_portfolio
+    show_portfolio()
 
 
-st.sidebar.title("🔀 Navigation")
-page = st.sidebar.radio("Go to", ["Home", "Portfolio"])
 
-if page == "Home":
-    #st.set_page_config(page_title="🏠 Dashboard", layout="wide")
-    st.title("📈 Market Dashboard")
 
-    # --- 1) Futures strip ---
-    st.subheader("Compare Markets • Futures")
-    fut_cols = st.columns(5)
-    futures = fetch_futures()  # you’ll write this helper in data_loader
-    for col, f in zip(fut_cols, futures):
-        col.metric(f["label"], f["value"], f"{f['change_pct']}%")
 
-    # --- 2) Recommended tickers ---
-    st.subheader("You may be interested in")
-    rec_cols = st.columns([1,2,1,1,1])
-    rec_cols[0].markdown("**Ticker**")
-    rec_cols[1].markdown("**Name**")
-    rec_cols[2].markdown("**Price**")
-    rec_cols[3].markdown("**Change**")
-    rec_cols[4].markdown("**➕**")
-    for r in fetch_recommended():  # write this to pull top movers or your watchlist
-        cols = st.columns([1,2,1,1,1])
-        cols[0].markdown(f"`{r['symbol']}`")
-        cols[1].write(r["name"])
-        cols[2].write(f"₹{r['price']:.2f}")
-        cols[3].write(f"{r['change']:+.2f} ({r['chg_pct']:+.2f}%)")
-        cols[4].button("+", key=f"add_{r['symbol']}")
 
-    # --- 3) News feed with tabs ---
-    st.subheader("Today's financial news")
-    news = fetch_financial_news()  # write a helper or hard-code some RSS pulls
-    # after you load `news = fetch_financial_news()`
-    tab_titles = ["Top stories", "Local market", "World markets"]
-    tab_keys   = ["global", "local",       "world"]
 
-    # st.tabs returns a list/tuple of Tab objects in the same order
-    tabs = st.tabs(tab_titles)
 
-    # now iterate them in parallel
-    for tab_obj, key in zip(tabs, tab_keys):
-        with tab_obj:
-            for item in news[key]:
-                st.markdown(f"**{item['source']}** • {item['time_ago']}")
-                st.write(f"[{item['title']}]({item['url']})")
-                st.divider()
-elif page == "Portfolio":
-    portfolio_app()
+
+
+
+

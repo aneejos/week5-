@@ -9,11 +9,13 @@ Features:
 - Caching of data to avoid redundant API calls
 """
 
+import os
+import requests
 import yfinance as yf
 import pandas as pd
 import logging
 from functools import lru_cache
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List, Tuple
 
 # Configure logging
@@ -120,16 +122,6 @@ def fetch_price_on_date(ticker: str, on_date: str) -> pd.Series:
             # As last resort, return the first row
             return df.iloc[0]
 
-def fetch_futures():
-    # Example static data; replace with a real API call if you like.
-    return [
-        {"label":"Dow Futures",     "value":"$42,401.00", "change_pct":-0.32},
-        {"label":"S&P Futures",     "value":"$6,017.00",  "change_pct":-0.31},
-        {"label":"Nasdaq Futures",  "value":"$21,860.25", "change_pct":-0.37},
-        {"label":"Gold",            "value":"$3,406.70",  "change_pct":-0.31},
-        {"label":"Crude Oil",       "value":"$70.74",     "change_pct":+0.70},
-    ]
-
 def fetch_recommended(followed_only=False):
     # Again, you can wire up yfinance or your own watchlist.
     lst = [
@@ -141,20 +133,68 @@ def fetch_recommended(followed_only=False):
         return lst[:5]  # for sidebar
     return lst
 
-def fetch_financial_news():
-    # Simple placeholder structure
-    return {
-        "global": [
-            {"title":"₹10,000 crore: Vishal Mega Mart…", "source":"Upstox",    "time_ago":"1 hour ago",  "url":"#"},
-            {"title":"Tata Motors shares in focus…",    "source":"CNBC TV18","time_ago":"2 hours ago", "url":"#"},
-            # …
-        ],
-        "local": [
-            {"title":"Gold price in Chennai records…", "source":"dtnext",    "time_ago":"1 day ago", "url":"#"}
-        ],
-        "world": [
-            {"title":"Aspora gets $50M from Sequoia…", "source":"TechCrunch","time_ago":"23 hours ago","url":"#"},
-            # …
-        ]
+def _time_ago(published_at: str) -> str:
+    """
+    Convert an ISO timestamp to a “X hours ago” or “Y days ago” string.
+    """
+    # NewsAPI returns something like "2025-06-17T12:34:56Z"
+    pub = datetime.fromisoformat(published_at.replace("Z", "+00:00"))
+    now = datetime.now(timezone.utc)
+    diff = now - pub
+
+    if diff.days >= 1:
+        return f"{diff.days} day{'s' if diff.days>1 else ''} ago"
+    hours = diff.seconds // 3600
+    if hours >= 1:
+        return f"{hours} hour{'s' if hours>1 else ''} ago"
+    minutes = diff.seconds // 60
+    return f"{minutes} minute{'s' if minutes>1 else ''} ago"
+
+def fetch_financial_news(page_size: int = 5, country: str = "in") -> dict:
+    """
+    Fetches financial news in three categories:
+      - global   : top business headlines worldwide
+      - local    : top business headlines in the given `country` (default "in")
+      - world    : everything about "markets"
+
+    Requires a NEWSAPI_API_KEY environment variable.
+    Returns:
+        {
+          "global": [ {title, source, time_ago, url}, ... ],
+          "local" : [ ... ],
+          "world" : [ ... ],
+        }
+    """
+    api_key = os.getenv("NEWSAPI_API_KEY")
+    if not api_key:
+        return {"global": [], "local": [], "world": []}
+
+    base = "https://newsapi.org/v2"
+    endpoints = {
+        "global": f"{base}/top-headlines?category=business&language=en&pageSize={page_size}&apiKey={api_key}",
+        "local":  f"{base}/top-headlines?category=business&country={country}&pageSize={page_size}&apiKey={api_key}",
+        "world":  f"{base}/everything?q=markets&language=en&pageSize={page_size}&sortBy=publishedAt&apiKey={api_key}",
     }
+
+    news = {}
+    for key, url in endpoints.items():
+        try:
+            resp = requests.get(url, timeout=5)
+            resp.raise_for_status()
+            articles = resp.json().get("articles", [])
+        except Exception:
+            articles = []
+
+        # Map to our display format
+        formatted = []
+        for art in articles:
+            formatted.append({
+                "title": art.get("title", "No title"),
+                "source": art.get("source", {}).get("name", "Unknown"),
+                "time_ago": _time_ago(art.get("publishedAt", "")),
+                "url": art.get("url", "#"),
+            })
+        news[key] = formatted
+
+    return news
 

@@ -1,185 +1,234 @@
-# Portfolio Manager & Optimizer
+# 📊 Streamlit Portfolio Manager & Market Dashboard
 
-A Streamlit-based personal portfolio management, tracking, and optimization app, styled after Google Finance. This project supports:
-
-1. **Multiple Portfolios** (create, switch, persist via JSON)
-2. **Investment Lots** (add multiple purchase entries per ticker)
-3. **Dynamic Performance Metrics** (total value, day gain, total gain)
-4. **Positions Table** (per‐ticker summary with gains)
-5. **Historical Charting** (time-range selectable line chart)
-6. **Purchase History View** (FIFO/LIFO helper)
-7. **Portfolio Optimization** (mean-variance optimizer with efficient frontier)
+A Streamlit-based personal portfolio management, tracking, and optimization app—styled after Google Finance—plus a real-time market dashboard. This README not only shows **how** to install and use the app, but also **why** each piece is structured the way it is, so you understand the design and logic behind every component.
 
 ---
 
-## 📂 Project Structure
+## 🌟 Features Overview
 
-```
+1. **Multi-Page Layout** via a custom top navigation bar  
+2. **Pinned Logo** fixed at the very top center of the viewport  
+3. **Dark Theme** globally configured with custom CSS  
+4. **Market Dashboard** (“Home” page)  
+   - Real-time indices for US, Europe, India, Currencies, Crypto  
+   - Pill-style toggle menu  
+   - Live metrics fetched from Yahoo Finance  
+   - Recommended tickers table  
+   - Financial news tabs powered by NewsAPI  
+5. **Portfolio Manager & Optimizer**  
+   - Create multiple named portfolios (JSON-backed)  
+   - Add/remove investment lots per ticker  
+   - Auto-autocomplete ticker search via Yahoo endpoint  
+   - Validate or default purchase price to real historical close  
+   - Compute real-time performance metrics & positions table  
+   - Mean-variance optimization with efficient frontier plot  
+6. **History & Details Pages**  
+   - Interactive historical portfolio value chart  
+   - Per-ticker purchase history (FIFO/LIFO) viewer  
+7. **Positions Page**  
+   - Stylized table with currency and percentage formats  
+
+---
+
+## 🏗️ Tech Stack & Dependencies
+
+- **Python 3.8+**  
+- **Streamlit** – UI framework  
+- **streamlit-option-menu** – horizontal nav bars & toggles  
+- **yfinance** – fetch live market data  
+- **requests** – HTTP calls for autocomplete & news  
+- **NewsAPI.org** – financial headlines (via REST)  
+- **pandas** – time-series & DataFrame operations  
+- **matplotlib** – plotting efficient frontier  
+- **JSON** – portfolio persistence  
+- **CSS** & **HTML** injection – custom theming & layout hacks  
+
+Install with:
+
+```bash
+git clone <your-repo-url>
+cd project_root
+python -m venv .venv
+source .venv/bin/activate      # macOS/Linux
+.\.venv\Scripts\activate       # Windows
+pip install -r requirements.txt
+pip install streamlit-option-menu yfinance newsapi-python
+🗂️ Repository Structure
+graphql
+Copy
+Edit
 project_root/
-├── .streamlit/
-│   └── config.toml                # Theme configuration
 ├── assets/
-│   └── logo.png                   # Your permanent logo
+│   └── logo.png               # App logo (Base64-embedded in main.py)
 ├── data/
-│   └── portfolios/                # JSON files for each portfolio
+│   └── portfolios/            # JSON files per portfolio
 │       └── MyPortfolio.json
 ├── src/
-│   ├── core/
-│   │   ├── portfolio_io.py        # Load/save JSON portfolios
-│   │   ├── portfolio_analyzer.py  # Compute metrics & historical values
-│   │   ├── data_loader.py         # Fetch price data (yfinance)
-│   │   └── portfolio_engine.py    # Mean‐variance & Black‐Litterman
-│   ├── streamlit_app/
-│   │   ├── components/
-│   │   │   ├── inputs.py          # Ticker search + date inputs
-│   │   │   └── investment_form.py # Add investment lots
-│   │   └── pages/
-│   │       ├── optimization.py    # Main portfolio manager & optimizer
-│   │       ├── history.py         # Historical performance chart
-│   │       ├── history_details.py # Per-ticker purchase history viewer
-│   │       └── positions.py       # Individual positions table
-└── requirements.txt               # Python dependencies
-```
+│   └── streamlit_app/
+│       ├── __init__.py
+│       ├── pages/
+│       │   ├── __init__.py
+│       │   ├── main.py                     # Entry-point with top nav + logo
+│       │   ├── Home.py                     # Market Dashboard
+│       │   ├── Portfolio Manager & Optimizer.py  # Portfolio UI & logic
+│       │   ├── History.py                  # Historical value chart
+│       │   ├── History Details.py          # FIFO/LIFO table
+│       │   └── Positions.py                # Positions table
+│       └── components/                     # Reusable Streamlit components
+│           ├── investment_form.py          # “Add / Remove Investment” UI
+│           └── charts.py                   # Pie chart & efficient frontier
+└── .streamlit/
+    └── config.toml                        # Dark theme config
+└── requirements.txt
+Why this layout?
 
----
+src/streamlit_app as a package with __init__.py allows Python imports from any page or component.
 
-## 🚀 Installation
+pages/ directory is where main.py dispatches to each page function via streamlit-option-menu.
 
-1. **Clone** the repo:
+components/ holds shared UI pieces (forms & charts) to avoid duplication.
 
-   ```bash
-   git clone <your-repo-url>
-   cd project_root
-   ```
+data/portfolios uses JSON for simplicity; can migrate to SQLite in future.
 
-2. **Create** and **activate** a virtual environment:
-
-   ```bash
-   python -m venv .venv
-   source .venv/bin/activate    # Linux / macOS
-   .venv\Scripts\activate       # Windows
-   ```
-
-3. **Install** dependencies:
-
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. **Ensure** your portfolios folder exists:
-
-   ```bash
-   mkdir -p data/portfolios
-   ```
-
-5. **Add** your `assets/logo.png`.
-
----
-
-## ▶️ Running the App
-
-From the project root, launch the main page:
-
-```bash
-streamlit run src/streamlit_app/pages/optimization.py
-```
-
-This opens the **Portfolio Manager & Optimizer**:
-
-* **Select or create** a portfolio
-* **Add investments** (ticker, shares, price, date)
-* View **Performance Overview**, **Positions**, **History**, and **Optimize Current Holdings**
-
-To explore other features:
-
-```bash
-streamlit run src/streamlit_app/pages/history.py     # Historical chart
-streamlit run src/streamlit_app/pages/history_details.py  # Purchase history view
-streamlit run src/streamlit_app/pages/positions.py   # Positions table
-```
-
----
-
-## 📖 Core Modules
-
-### `core/portfolio_io.py`
-
-* `get_all_portfolio_names()` → list JSON files in `data/portfolios/`
-* `load_portfolio(name)` → load `{ticker: [lots...]}` from `<name>.json`
-* `save_portfolio(name, data)` → persist back to disk
-
-### `core/portfolio_analyzer.py`
-
-* `compute_portfolio_metrics(holdings)` → total value, day gain, total gain, detailed positions DataFrame
-* `compute_historical_portfolio_value(portfolio, start, end)` → time-series of total portfolio value
-
-### `core/data_loader.py`
-
-* `fetch_historical_data(tickers, start, end)` → DataFrame of adjusted closes
-
-### `core/portfolio_engine.py`
-
-* `PortfolioOptimizer` class → `mean_variance_optimization()`, Black-Litterman, efficient frontier plotting
-
----
-
-## 📱 Streamlit Pages & Components
-
-### `components/inputs.py`
-
-Ticker search (autocomplete) + date range inputs
-
-### `components/investment_form.py`
-
-Company/ticker lookup, add multiple lots, auto-clear on submission
-
-### `pages/optimization.py`
-
-* Portfolio picker + create new
-* Investment form + JSON persistence
-* Performance overview (`st.metric`)
-* Positions table summary
-* ⚙️ Optimization section (weights, pie chart, frontier)
-
-### `pages/history.py`
-
-Time-range selector + `st.line_chart` of historical portfolio value
-
-### `pages/history_details.py`
-
-Per-ticker FIFO/LIFO purchase history table with highlighting
-
-### `pages/positions.py`
-
-Interactive positions table styled with formats (₹, %)
-
----
-
-## 🎨 Configuration
-
-**Theme**: `.streamlit/config.toml`
-
-```toml
+⚙️ Configuration
+1. Streamlit Theme (.streamlit/config.toml)
+toml
+Copy
+Edit
 [theme]
 primaryColor = "#0B5394"
-backgroundColor = "#F8F9FA"
-secondaryBackgroundColor = "#E0E7EF"
-textColor = "#1C1C1C"
-font = "sans serif"
-```
+backgroundColor = "#1E1E2F"
+secondaryBackgroundColor = "#2A2A3E"
+textColor = "#E0E0E0"
+font = "system-ui"
+Dark slate background (#1E1E2F) improves contrast.
 
-**Logo**: place `logo.png` in `assets/`, rendered atop pages
+Accent blue (#0B5394) highlights nav bars and buttons.
 
----
+2. Environment Variables
+NEWSAPI_API_KEY – required for fetch_financial_news.
 
-## 🗒 Next Steps
+bash
+Copy
+Edit
+export NEWSAPI_API_KEY="your_key_here"
+Optional YFINANCE_CACHE to speed up repeated fetches.
 
-* **Feature 7**: Integrated news feed (“Portfolio in the News”)
-* **Database migration**: swap JSON for SQLite when ready
-* **Home / Landing Page**: add market futures, trending tickers, news cards
-* **Light/Dark mode**: reintroduce CSS toggle if desired
-* **CI / Tests**: add `pytest` and GitHub Actions for automated checks
+▶️ Running the App
+From the project root, launch:
 
----
+bash
+Copy
+Edit
+streamlit run src/streamlit_app/pages/main.py
+Streamlit will start a local server (e.g. http://localhost:8501). The top navigation bar (Home, Portfolio, History, …) appears immediately under your pinned logo, and content loads without delay spinners.
 
-Keep this README bookmarked—copy & paste into future chats to pick up exactly where you left off!
+🔎 Deep Dive: Core Modules & Logic
+1. Path Hack & Logo Injection (main.py)
+Problem: Python must locate src/streamlit_app as a package when running from pages/.
+
+Solution: At top of main.py, compute SRC_FOLDER and insert it into sys.path.
+
+Logo: Read assets/logo.png as bytes, Base64-encode it, then inject via components.v1.html so it lives outside of Streamlit’s scrollable .block-container.
+
+CSS: Remove default header/menu/footer and collapse top padding, then push all content down by 120px so the logo never overlaps.
+
+2. Custom Top Navigation
+python
+Copy
+Edit
+selection = option_menu(
+  menu_title=None,
+  options=["Home","Portfolio",…],
+  icons=[…],
+  orientation="horizontal",
+  styles={…},
+)
+Why option_menu? Gives pill-style buttons, color states, and icons without manual HTML.
+
+Immediate dispatch: We call the relevant show_home() or app() function as soon as selection changes.
+
+3. Market Dashboard (Home.py)
+Pill Toggle: Uses option_menu again for categories (“US”, “Europe”, etc.).
+
+fetch_indices():
+
+Calls yfinance.Ticker(sym).fast_info for last_price & previous_close.
+
+Calculates delta and % change for real-time metrics.
+
+Layout: st.columns(len(indices), gap="small") arranges the metrics evenly.
+
+Recommended Tickers: Static or dynamic list rendered as a 5-column table with “➕” buttons.
+
+Financial News:
+
+fetch_financial_news() (in core/data_loader.py) calls NewsAPI endpoints for global/local/world markets.
+
+_time_ago() helper converts ISO timestamps to “X hours ago” strings.
+
+Rendered inside st.tabs([...]) for easy switching.
+
+4. Portfolio I/O & Analytics
+portfolio_io.py:
+
+get_all_portfolio_names() scans data/portfolios/*.json.
+
+load_portfolio(name) → loads a dict { ticker: [lots…] }.
+
+save_portfolio(name, data) → writes JSON with indent=2.
+
+investment_form.py:
+
+Ticker autocomplete: Cached requests.get to Yahoo’s search endpoint.
+
+Form logic:
+
+Text input for query.
+
+selectbox for suggestions.
+
+Direct ticker acceptance if input is all-caps 1–5 chars.
+
+Fetch real close for the chosen ticker + purchase_date (via new fetch_price_on_date in data_loader.py) to default the price field.
+
+Validate user-entered price against that day’s Low/High ±2% and warn if unrealistic.
+
+Append to current_portfolio[ticker] list and return an updated flag.
+
+optimization.py:
+
+Loads the portfolio dict, calls add_investment_form(), and if updated → save_portfolio() and st.experimental_rerun() so the UI refreshes with new data.
+
+Metrics: Builds holdings = [{"ticker":…, "shares": total_shares}].
+
+Calls compute_portfolio_metrics(holdings) which returns:
+
+summary: total value, day gain, total gain, percentages
+
+positions: DataFrame of current price, value, day gain, total gain per ticker
+
+Optimization:
+
+On “Optimize Current Holdings” click, fetch 1-year history via fetch_historical_data().
+
+Instantiate PortfolioOptimizer(prices) → mean_variance_optimization().
+
+Display optimal weights (DataFrame), allocation pie (display_weights_pie()), and efficient frontier (plot_efficient_frontier()).
+
+5. History & Positions Pages
+History:
+
+Date‐range selector → calls compute_historical_portfolio_value(portfolio, start, end) to get a time series.
+
+Rendered via st.line_chart().
+
+History Details:
+
+Let user pick a ticker → show a table of purchase lots in FIFO or LIFO order.
+
+Highlights recent lots for clarity.
+
+Positions:
+
+Full positions DataFrame styled with ₹ and % formatting, sortable and filterable

@@ -28,36 +28,54 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+import logging
+import pandas as pd
+import yfinance as yf
+
 def fetch_historical_data(tickers, start, end):
     """
-    Fetches historical close prices for given tickers.
-    Handles both single and multiple ticker cases.
+    Download historical auto‐adjusted close prices for the given tickers
+    between start and end dates, returning a DataFrame with one column
+    per ticker.
+
+    Parameters:
+    - tickers: single ticker string or tuple/list of ticker strings
+    - start:   "YYYY-MM-DD" start date (inclusive)
+    - end:     "YYYY-MM-DD" end date (exclusive)
+
+    Returns:
+    - pd.DataFrame of closing prices (auto-adjusted), indexed by date.
+      If a single ticker is passed, returns a one-column DataFrame.
+      On error, returns an empty DataFrame.
     """
     try:
-        tickers = list(tickers)
-        df = yf.download(tickers=tickers, start=start, end=end, group_by='ticker', auto_adjust=False, adjusted=True)
-
-        # Handle single ticker
-        if len(tickers) == 1:
-            ticker = tickers[0]
-            if isinstance(df.columns, pd.MultiIndex):
-                df = df[ticker]["Close"].to_frame(name=ticker)
-            elif 'Close' in df.columns:
-                df = df[['Close']].rename(columns={'Close': ticker})
-            else:
-                raise KeyError("No 'Close' column found")
+        # Fetch data with corporate actions (splits/dividends) applied
+        df = yf.download(
+            tickers,
+            start=start,
+            end=end,
+            auto_adjust=True,
+            progress=False,
+            threads=True
+        )
+        # yfinance with auto_adjust=True places adjusted prices in the "Close" column
+        if "Close" in df:
+            closes = df["Close"]
         else:
-            if isinstance(df.columns, pd.MultiIndex):
-                close_data = {ticker: df[ticker]['Close'] for ticker in tickers if 'Close' in df[ticker]}
-                df = pd.concat(close_data, axis=1)
-            else:
-                raise ValueError("Unexpected format for multiple tickers")
+            # Fallback: use entire DataFrame if it's already just prices
+            closes = df
 
-        df.dropna(how='all', inplace=True)
-        return df
+        # If it's a Series (single ticker), convert to DataFrame
+        if isinstance(closes, pd.Series):
+            name = tickers if isinstance(tickers, str) else list(tickers)[0]
+            closes = closes.to_frame(name=name)
+
+        return closes
+
     except Exception as e:
-        logger.error(f"Error fetching historical data: {e}")
+        logging.error(f"Error fetching historical data: {e}")
         return pd.DataFrame()
+
 
 
 

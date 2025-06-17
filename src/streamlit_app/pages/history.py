@@ -9,7 +9,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '.
 from core.portfolio_io import get_all_portfolio_names, load_portfolio
 from core.portfolio_analyzer import compute_historical_portfolio_value
 
-st.set_page_config(page_title="Portfolio History", layout="wide")
+#st.set_page_config(page_title="Portfolio History", layout="wide")
 st.title("📈 Portfolio Historical Performance")
 
 # 1) Choose an existing portfolio

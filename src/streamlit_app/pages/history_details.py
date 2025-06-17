@@ -9,7 +9,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '.
 
 from core.portfolio_io import get_all_portfolio_names, load_portfolio
 
-st.set_page_config(page_title="Purchase History", layout="wide")
+#st.set_page_config(page_title="Purchase History", layout="wide")
 st.title("🕑 Purchase History Viewer")
 
 # 1) Select Portfolio

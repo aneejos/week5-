@@ -4,7 +4,7 @@ import yfinance as yf
 import os
 import json
 
-st.set_page_config(page_title="Positions", layout="wide")
+#st.set_page_config(page_title="Positions", layout="wide")
 
 DATA_DIR = "user_data"
 

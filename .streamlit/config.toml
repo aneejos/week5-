@@ -1,9 +1,11 @@
+
 [theme]
-primaryColor = "#0B5394"         # Deep blue (brand/confidence)
-backgroundColor = "#F8F9FA"      # Very light grey (clean background)
-secondaryBackgroundColor = "#E0E7EF"  # Soft blue-gray (panel areas)
-textColor = "#1C1C1C"            # Dark gray-black for readability
+primaryColor = "#1DB954"               # Spotify Green
+backgroundColor = "#191414"            # Spotify Black
+secondaryBackgroundColor = "#1ED760"   # Spotify Light Green
+textColor = "#FFFFFF"                  # White text
 font = "sans serif"
+
 
 [server]
 headless = true

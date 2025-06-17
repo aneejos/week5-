@@ -33,7 +33,7 @@ def fetch_historical_data(tickers, start, end):
     """
     try:
         tickers = list(tickers)
-        df = yf.download(tickers=tickers, start=start, end=end, group_by='ticker', auto_adjust=True)
+        df = yf.download(tickers=tickers, start=start, end=end, group_by='ticker', auto_adjust=False, adjusted=True)
 
         # Handle single ticker
         if len(tickers) == 1:
@@ -88,4 +88,73 @@ def get_daily_returns(price_df: pd.DataFrame) -> pd.DataFrame:
         pd.DataFrame: Daily percentage returns.
     """
     return price_df.pct_change().dropna()
+
+def fetch_price_on_date(ticker: str, on_date: str) -> pd.Series:
+    """
+    Returns a Series with ['Open', 'High', 'Low', 'Close', 'Adj Close'] for ticker on that date.
+
+    Parameters:
+    - ticker: str, the stock symbol (e.g., 'AAPL')
+    - on_date: str, date in 'YYYY-MM-DD' format
+
+    Returns:
+    - pd.Series with price fields for that date, or empty Series if no data.
+    """
+    # Parse date
+    date_obj = pd.to_datetime(on_date)
+    next_day = (date_obj + pd.Timedelta(days=1)).strftime('%Y-%m-%d')
+
+    # Download one-day window (yfinance end date is exclusive)
+    df = yf.download(ticker, start=on_date, end=next_day, auto_adjust=False)
+    if df.empty:
+        return pd.Series(dtype=float)
+
+    # Try to access by string date first
+    try:
+        return df.loc[on_date]
+    except KeyError:
+        # Fallback to Timestamp index
+        try:
+            return df.loc[date_obj]
+        except KeyError:
+            # As last resort, return the first row
+            return df.iloc[0]
+
+def fetch_futures():
+    # Example static data; replace with a real API call if you like.
+    return [
+        {"label":"Dow Futures",     "value":"$42,401.00", "change_pct":-0.32},
+        {"label":"S&P Futures",     "value":"$6,017.00",  "change_pct":-0.31},
+        {"label":"Nasdaq Futures",  "value":"$21,860.25", "change_pct":-0.37},
+        {"label":"Gold",            "value":"$3,406.70",  "change_pct":-0.31},
+        {"label":"Crude Oil",       "value":"$70.74",     "change_pct":+0.70},
+    ]
+
+def fetch_recommended(followed_only=False):
+    # Again, you can wire up yfinance or your own watchlist.
+    lst = [
+        {"symbol":"MU",     "name":"Micron Technology Inc",  "price":119.84, "change":+4.24, "chg_pct":+3.67},
+        {"symbol":"META",   "name":"Meta Platforms Inc",     "price":702.12, "change":+19.78,"chg_pct":+2.90},
+        # … etc …
+    ]
+    if followed_only:
+        return lst[:5]  # for sidebar
+    return lst
+
+def fetch_financial_news():
+    # Simple placeholder structure
+    return {
+        "global": [
+            {"title":"₹10,000 crore: Vishal Mega Mart…", "source":"Upstox",    "time_ago":"1 hour ago",  "url":"#"},
+            {"title":"Tata Motors shares in focus…",    "source":"CNBC TV18","time_ago":"2 hours ago", "url":"#"},
+            # …
+        ],
+        "local": [
+            {"title":"Gold price in Chennai records…", "source":"dtnext",    "time_ago":"1 day ago", "url":"#"}
+        ],
+        "world": [
+            {"title":"Aspora gets $50M from Sequoia…", "source":"TechCrunch","time_ago":"23 hours ago","url":"#"},
+            # …
+        ]
+    }
 

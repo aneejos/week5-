@@ -75,15 +75,21 @@ def app():
 
             st.subheader("💹 Portfolio Performance Overview")
             c1, c2, c3 = st.columns(3)
-            c1.metric("💰 Total Value",
-                      f"₹{summary['total_value']:,}",
-                      delta=f"₹{summary['total_gain']:,} ({summary['total_gain_pct']}%)")
-            c2.metric("📈 Day Gain",
-                      f"₹{summary['day_gain']:,}",
-                      delta=f"{summary['day_gain_pct']}%")
-            c3.metric("📊 Total Gain",
-                      f"₹{summary['total_gain']:,}",
-                      delta=f"{summary['total_gain_pct']}%")
+            c1.metric(
+                "💰 Total Value",
+                f"₹{summary['total_value']:.3f}",
+                delta=f"₹{summary['total_gain']:.3f} ({summary['total_gain_pct']:.3f}%)"
+            )
+            c2.metric(
+                "📈 Day Gain",
+                f"₹{summary['day_gain']:.3f}",
+                delta=f"{summary['day_gain_pct']:.3f}%"
+            )
+            c3.metric(
+                "📊 Total Gain",
+                f"₹{summary['total_gain']:.3f}",
+                delta=f"{summary['total_gain_pct']:.3f}%"
+            )
 
             st.subheader("📋 Individual Positions")
             st.dataframe(positions_df.style.format({

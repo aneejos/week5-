@@ -69,7 +69,7 @@ class PortfolioOptimizer:
         bl = BlackLittermanModel(self.S, pi="market", market_caps=market_caps, absolute_views=views, omega=omega)
         bl_return = bl.bl_returns()
         ef = EfficientFrontier(bl_return, self.S)
-        weights = ef.max_sharpe()
+        weights = ef.max_sharpe(risk_free_rate= 0.01)
         cleaned_weights = ef.clean_weights()
         perf = ef.portfolio_performance(verbose=False)
         return {

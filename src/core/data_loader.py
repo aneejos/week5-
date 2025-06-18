@@ -202,6 +202,16 @@ def fetch_financial_news(page_size: int = 5, country: str = "in") -> dict:
             articles = resp.json().get("articles", [])
         except Exception:
             articles = []
+    
+        # 𝗙𝗮𝗹𝗹𝗯𝗮𝗰𝗸 for local if no top-headlines returned
+        if key == "local" and not articles:
+            fallback_url = f"{base}/everything?q=stock+market+India&language=en&pageSize={page_size}&sortBy=publishedAt&apiKey={api_key}"
+            try:
+                resp = requests.get(fallback_url, timeout=5)
+                resp.raise_for_status()
+                articles = resp.json().get("articles", [])
+            except Exception:
+                pass
 
         # Map to our display format
         formatted = []
@@ -215,4 +225,58 @@ def fetch_financial_news(page_size: int = 5, country: str = "in") -> dict:
         news[key] = formatted
 
     return news
+
+
+import yfinance as yf
+
+def fetch_popular_stocks():
+    """
+    Returns a list of dicts for the “Discover more” carousel:
+      [
+        {
+          "ticker": "MSFT",
+          "name":  "Microsoft Corp",
+          "price": 478.04,
+          "delta": -1.12,
+          "pct":   -0.23
+        },
+        …
+      ]
+    """
+    # You can replace these with your own watchlist or API call
+    mapping = {
+        "AMZN": "Amazon.com Inc",
+        "META": "Meta Platforms Inc",
+        "TSLA": "Tesla Inc",
+        "NFLX": "Netflix Inc",
+        "NVDA": "NVIDIA Corp",
+        "MSFT": "Microsoft Corp",
+        "AAPL": "Apple Inc",
+        "GOOGL": "Alphabet Inc Class A",
+        "JPM": "JPMorgan Chase & Co",
+        "ORCL": "Oracle Corp",
+    }
+
+    results = []
+    for ticker, name in mapping.items():
+        try:
+            tk = yf.Ticker(ticker)
+            info = tk.fast_info
+            current    = info["last_price"]
+            prev_close = info["previous_close"]
+            delta      = current - prev_close
+            pct        = (delta / prev_close) * 100 if prev_close else 0.0
+        except Exception:
+            # skip if any fetch fails
+            continue
+
+        results.append({
+            "ticker": ticker,
+            "name":   name,
+            "price":  current,
+            "delta":  delta,
+            "pct":    pct
+        })
+
+    return results
 

@@ -7,7 +7,7 @@ Implements portfolio optimization models including:
 
 Uses PyPortfolioOpt for core computations.
 """
-
+'''
 from pypfopt.efficient_frontier import EfficientFrontier
 from pypfopt.risk_models import CovarianceShrinkage
 from pypfopt.expected_returns import mean_historical_return
@@ -80,5 +80,83 @@ class PortfolioOptimizer:
                 "sharpe_ratio": perf[2]
             }
         }
+'''
+# src/core/portfolio_engine.py
 
+import numpy as np
+import pandas as pd
+from scipy.optimize import minimize
+
+class PortfolioOptimizer:
+    """
+    Simple Mean-Variance optimizer without PyPortfolioOpt.
+    """
+
+    def __init__(self, price_df: pd.DataFrame, periods_per_year: int = 252):
+        """
+        Args:
+            price_df: DataFrame of historical **prices**, indexed by date, columns=tickers.
+            periods_per_year: Number of trading periods in a year (252 for daily).
+        """
+        # 1) Compute simple returns
+        returns = price_df.pct_change().dropna()
+
+        # 2) Annualize expected return and covariance
+        self.mu = returns.mean() * periods_per_year                   # Series: expected annual return
+        self.S  = returns.cov() * periods_per_year                    # DataFrame: annual covariance
+
+        self.tickers = list(price_df.columns)
+
+    def mean_variance_optimization(self, risk_free_rate: float = 0.0) -> dict:
+        """
+        Solve max Sharpe = (w^T mu - rf) / sqrt(w^T S w)
+        under w >= 0 and sum(w)==1.
+        Returns the same dict structure as before.
+        """
+        n = len(self.mu)
+
+        def neg_sharpe(w):
+            # portfolio return
+            port_ret = w @ self.mu
+            # portfolio vol
+            port_vol = np.sqrt(w @ self.S.values @ w)
+            # negative Sharpe
+            return - (port_ret - risk_free_rate) / port_vol
+
+        # constraints: sum weights = 1
+        cons = ({'type': 'eq', 'fun': lambda w: np.sum(w) - 1})
+        # bounds: no shorting
+        bnds = tuple((0.0, 1.0) for _ in range(n))
+        # initial guess: equal weights
+        w0 = np.repeat(1/n, n)
+
+        sol = minimize(neg_sharpe, w0,
+                       method="SLSQP",
+                       bounds=bnds,
+                       constraints=cons)
+
+        if not sol.success:
+            raise ValueError(f"Optimization failed: {sol.message}")
+
+        weights = sol.x
+        # zero out very small weights
+        cleaned = {t: float(w) for t, w in zip(self.tickers, weights) if w > 1e-6}
+
+        # compute performance
+        port_ret = weights @ self.mu
+        port_vol = np.sqrt(weights @ self.S.values @ weights)
+        sharpe   = (port_ret - risk_free_rate) / port_vol
+
+        return {
+            "weights": cleaned,
+            "performance": {
+                "expected_return": float(port_ret),
+                "volatility":      float(port_vol),
+                "sharpe_ratio":    float(sharpe)
+            }
+        }
+
+
+    # If you still need Black‐Litterman, you can re‐implement it
+    # with cvxpy or manual matrix algebra—but that’s more involved.
 
